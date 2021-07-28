@@ -10,62 +10,7 @@ import CustomPicker from '../components/CustomPicker';
 import DetailModal from '../components/DetailModal';
 import FilterModal from '../components/FilterModal';
 import ListComponent from '../components/ListComponent';
-
-const PREFIX = [
-  'a.',
-  'b.',
-  'c.',
-  'd.',
-  'e.',
-  'f.',
-  'g.',
-  'h.',
-  'i.',
-  'j.',
-  'k.',
-];
-
-const formatData = data => {
-  let mData = [];
-
-  let parentPrefix = 0;
-  _.forEach(data, (mItem, index) => {
-    let pObject = {};
-    let childPrefix = -1;
-    if (mItem.parent_objective_id == '') {
-      parentPrefix = parentPrefix + 1;
-
-      pObject = {
-        ...mItem,
-        prefix: `${parentPrefix}.`,
-        expand: true,
-        showTogle: true,
-      };
-      let filters = [];
-
-      _.forEach(data, (dItem, index) => {
-        if (mItem.id === dItem.parent_objective_id) {
-          childPrefix = childPrefix + 1;
-          dItem.prefix = PREFIX[childPrefix];
-          filters.push(dItem);
-        }
-      });
-      pObject.data = filters;
-      mData.push(pObject);
-    }
-  });
-  return mData;
-};
-
-const getCategory = data => {
-  let categories = [];
-  categories = _.map(data, (mItem, index) => ({
-    label: mItem.category,
-    id: index,
-  }));
-  categories = _.uniqBy(categories, 'label');
-  return categories;
-};
+import {formatData, getCategory} from '../utils/helper';
 
 const OKRListingPage = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -86,6 +31,10 @@ const OKRListingPage = () => {
   }, []);
 
   const getData = async () => {
+    /**
+     *make api call
+     */
+
     try {
       url = 'https://okrcentral.github.io/sample-okrs/db.json';
       response = await fetch(url, {
@@ -96,6 +45,9 @@ const OKRListingPage = () => {
       if (response.ok) {
         const data = await response.json();
         const mData = formatData(data.data);
+        /**
+         *set local set variable, e.g data ,filter options
+         */
         setData(mData);
         setDataSource(data.data);
         const options = getCategory(data.data);
@@ -109,6 +61,11 @@ const OKRListingPage = () => {
   };
 
   const handleOnSelect = item => {
+    /**
+     *handle multi select category filter options
+     * help in to show check/uncheck
+     */
+
     let uSelectedData = selectedOptions;
     const index = _.findIndex(uSelectedData, {id: item.id});
     if (index !== -1) {
@@ -121,6 +78,10 @@ const OKRListingPage = () => {
   };
 
   const handleOnApplyFilter = () => {
+    /**
+     * filter the data base on selected category
+     */
+
     if (selectedOptions && selectedOptions.length) {
       let filterData = [];
       _.forEach(selectedOptions, fItem => {
@@ -145,11 +106,17 @@ const OKRListingPage = () => {
   };
 
   const getFilter = () => {
+    /**
+     * get all applied category filter
+     */
     const labels = _.map(selectedOptions, item => item.label);
     return labels.toString();
   };
 
   const handleExpand = item => {
+    /**
+     * handle hide/show child list of a parent node
+     */
     const index = _.findIndex(data, {id: item.id});
     if (index !== -1) {
       data[index].expand = !data[index].expand;
@@ -159,8 +126,24 @@ const OKRListingPage = () => {
   };
 
   const handleDetailModal = item => {
+    /**
+     * open details of a child node
+     */
     setDetailItem(item);
     setVisibleDetail(true);
+  };
+
+  const getParentTitle = () => {
+    let title = 'Detail';
+    const found = _.find(
+      data,
+      dItem => dItem.id === detailItem.parent_objective_id,
+    );
+    if (typeof found !== 'undefined') {
+      title = found.title;
+    }
+
+    return title;
   };
 
   return (
@@ -195,7 +178,7 @@ const OKRListingPage = () => {
 
       {visibleDetail && (
         <DetailModal
-          title={'Details'}
+          title={getParentTitle()}
           visible={visibleDetail}
           data={detailItem}
           handleOnCancel={() => setVisibleDetail(false)}
